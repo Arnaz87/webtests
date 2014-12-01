@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <script src="jquery.js"></script>
+  <script src="mylib.js"></script>
+  <script src="data.js"></script>
+  </head>
+
+  <body ng-app="" ng-controller="cont">
+    <h2>Interpreter</h2>
+
+    <textarea id="input"></textarea>
+    <button onclick="action()">Procesar</button>
+    <p id="data"></p>
+    <p id="output"></p>
+
+    <p>
+      <pre id="debug"></pre>
+    </p>
+  </body>
+
+  <script>
+
+    Exp = function (op, arg1, arg2) {
+      this.op = op;
+      this.arg1 = arg1;
+      this.arg2 = arg2;
+    }
+    Cmd = function (val) {
+      this.val = val;
+      this.toString = function () {
+        return "Cmd(\"" + this.val + "\")";
+      }
+      this.toExp = function () {
+        return cmdToExp(this);
+      }
+    }
+    Var = function (val) {
+      this.val = val;
+      this.toString = function () {
+        return "Var(\"" + this.val + "\")";
+      }
+    }
+    data = {};
+
+    function input () {
+      return $('#input').val();
+    }
+    function output (val) {
+      $('#output').text(val);
+    }
+    function debug (val) {
+      console.log(val);
+      $('#debug').text(ml.tojson(val));
+    }
+
+    function cmdToExp (cmd) {
+      var str = cmd.val;
+      var exp = new Exp();
+      var len = str.length;
+      var eq = isAssign(str);
+      var par = isFunc(str);
+      // Si tiene un signo igual, es una asignación.
+      // El primer argumento es la variable a asignar,
+      // el segundo es el valor para esa variable.
+      if (eq) {
+        exp.op = '=';
+        exp.arg1 = str.slice(0, eq);
+        exp.arg2 = str.slice(eq + 1, len);
+        return exp;
+      }
+      if (par) {
+        exp.op = 'func';
+        arg1 = str.slice(0, par);
+        arg2 = str.slice(par + 1, len - 1);
+        exp.arg1 = new Cmd(arg1);
+        exp.arg2 = new Cmd(arg2);
+        return exp;
+      }
+      var spa = str.indexOf(' ');
+      if (spa > 0) {
+        exp.op = str.slice(0, spa);
+        exp.arg1 = new Cmd( str.slice(spa+1, len) );
+        return exp;
+      } else {
+        return new Var(str);
+      }
+    }
+
+    function isAssign (str) {
+      var eq = str.indexOf('=');
+      var haseq = eq > 0;
+      if (haseq) {
+        return eq;
+      } else {
+        return 0;
+      }
+    }
+
+    function isFunc (str) {
+      var par = str.indexOf('(');
+      var spa = str.indexOf(' ');
+      var hasPar = par > 0;
+      var hasSpa = spa > 0;
+      if (hasPar) {
+        if (hasSpa) {
+          if (par < spa) {
+            return par
+          } else {
+            return 0;
+          }
+        } else {
+          return par;
+        }
+      } else {
+        return 0;
+      }
+    }
+
+    function action () {
+      var mainCmd = new Cmd(input());
+      var mainExp = mainCmd.toExp();
+      debug(mainExp);
+    }
+  </script>
+</html>

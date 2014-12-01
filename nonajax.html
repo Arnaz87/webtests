@@ -1,0 +1,49 @@
+<html>
+  <head>
+    <meta charset="UTF-8"> 
+    <title>Non Ajax Requests</title>
+    <script src="angular.js"></script>
+    <script src="jquery.js"></script>
+    <script src="mylib.js"></script>
+    <script src="data.js"></script>
+  </head>
+  <body>
+
+    <input ml-model="fun()">
+    <p ml-bind="fun()"></p>
+
+    <form action="server" method="get" id="form">
+      <input type="submit" value="Aceptar">
+    </form>
+
+    <pre id="objs"></pre>
+  </body>
+  <script type="text/javascript">
+
+    console.log(['models', ml.models]);
+    console.log(['binds', ml.binds]);
+
+    ml.init(function () {
+      ml.models['x'] = 'hola';
+      ml.models['mod'] = {};
+      ml.models['fun'] = function (a) {
+        if (a != undefined) {
+          ml.models['x'] = ml.models['x'] + "x";
+          ml.models['mod']['y'] = a + ml.models['x'];
+          return a;
+        } else {
+          return ml.models['mod']['y'] + "lol";
+        }
+      }
+    });
+
+    ml.refresh(function () {
+      $('#objs').text(ml.tojson(ml.models));
+    });
+
+    $('#form').on('submit', function () {
+      ml.addObject($('#form'), data.arnaud.simple, 'yo');
+      return true;
+    });
+  </script>
+</html>

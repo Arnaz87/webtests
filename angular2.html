@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <script src="angular.js"></script>
+  <script src="jquery.js"></script>
+  <script src="mylib.js"></script>
+  <script src="data.js"></script>
+  </head>
+
+  <body ng-app="" ng-controller="cont">
+    <h2>Angular 2</h2>
+
+    <select ng-model="categoria" ng-options="cat.nombre for cat in categorias">
+    </select>
+    <br>
+
+    <input type="text" ng-model="material.nombre">Nombre<br>
+
+    <input type="number" ng-model="material.precio">Precio<br>
+    <input type="number" ng-model="material.cantidad">{{prop('cantidad')}}<br>
+    <div class="input" ng-if="tipo().props.alto">
+      <input type="number" ng-model="material.alto">{{prop('alto')}}<br>
+    </div>
+    <div class="input" ng-if="tipo().props.alto">
+      <input type="number" ng-model="material.ancho">{{prop('ancho')}}<br>
+    </div>
+    <p>Costo: {{material.costo}}</p>
+
+    <pre ng-bind="mat()"></pre>
+
+    <script>
+      function cont ($scope) {
+
+        $scope.categorias = data.artecol.categorias;
+        $scope.tipos = data.artecol.tipos;
+        $scope.categoria = data.artecol.categorias[0];
+
+        $scope.material = {
+          categoria: 1,
+          nombre: 'nuevo material',
+          precio: 0,
+          costo: 0,
+          cantidad: 1,
+          alto: 1,
+          ancho: 1
+        };
+
+        $scope.mat = function () {
+          var mat = $scope.material;
+
+          mat.categoria = $scope.categoria.id;
+          mat.costo = $scope.tipo().func(mat);
+
+          return ml.tojson($scope.material);
+        }
+
+        $scope.tipo = function () {
+          return $scope.tipos[$scope.categoria.tipo];
+        }
+
+        $scope.prop = function (name) {
+          var def = $scope.tipos.default.props[name];
+          def = def || name;
+          var act = $scope.tipo().props[name];
+          if (typeof act != 'string') {
+            return def;
+          } else {
+            return act;
+          }
+        }
+
+        $scope.json = function () {
+          var jsond = {
+            material: $scope.material,
+            categoria: $scope.categoria
+          }
+          return ml.tojson(jsond);
+        }
+
+      }
+    </script>
+  </body>
+</html>

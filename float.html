@@ -1,0 +1,191 @@
+<script src="jquery.js"></script>
+<script type="text/javascript">
+
+  var nums = {};
+
+  $(function () {
+    nums['1'] = NumParts(0);
+    nums['2'] = NumParts(0);
+    nums['3'] = NumParts(0);
+    refreshRow('1', nums['1']);
+    refreshRow('2', nums['2']);
+    refreshRow('3', nums['3']);
+
+    var bools = $('#bools');
+    bools.find('.bool-group').each(function (i, e) {
+      e = $(e);
+      count = Number(e.attr('count'));
+      for (var j = 0; j < count; j++) {
+        var bool = $('<input>');
+        bool.attr('type', 'checkbox');
+        bool.attr('id', 'b-'+j);
+        bool.on('change', changeBool);
+        e.append(bool);
+      }
+    });
+
+  });
+
+  function IntToFloat (x) {
+    var int = new Uint32Array(1);
+    int[0] = x;
+    var float = new Float32Array(int.buffer);
+    return float[0];
+  }
+
+  function FloatToInt (x) {
+    var float = new Float32Array(1);
+    float[0] = x;
+    var int = new Uint32Array(float.buffer);
+    return int[0];
+  }
+
+  function IntToBinary (x, length) {
+    var s = x.toString(2);
+    var l = length - s.length;
+    for (var i = 0; i < l; i++) {
+      s = '0'+s;
+    };
+    return s;
+  }
+
+  function FloatToBinary (x) {
+    return IntToBinary(FloatToInt(x), 32);
+  }
+
+  function NumParts (x) {
+    num = {};
+    num.int = FloatToInt(x);
+    num.float = IntToFloat(num.int);
+    num.bin = IntToBinary(num.int, 32);
+    num.mant = num.int & 0x7fffff;
+    num.mantd = IntToFloat(num.mant | (127 << 23));
+    num.exp = (num.int >> 23) & 0xff;
+    return num;
+  }
+
+  function change (row) {
+    num = prompt("Ingresa un numero");
+    num = NumParts(Number(num));
+    nums[row] = num;
+    refreshRow(row, num);
+    sum = nums['1'].float - nums['2'].float;
+    sum = NumParts(sum);
+    nums['3'] = sum;
+    refreshRow('3', sum)
+  }
+
+  function refreshRow (row, num) {
+    row = $('#tr-'+row);
+    row.find('.num').text(num.float);
+    row.find('.bin').text(num.bin);
+    row.find('.en').text(num.exp);
+    row.find('.eb').text(IntToBinary(num.exp, 8));
+    row.find('.mn').text(num.mantd);
+    row.find('.mb').text(IntToBinary(num.mant, 23));
+  }
+
+  function changeBool () {
+    bools = $('#bools .bool-group');
+    bin = '';
+
+    //Signo
+    sign = $(bools[0]).find('input');
+    sign = sign.is(':checked');
+    bin += sign ? '1' : '0';
+    sign = sign ? '+' : '-';
+    $('#bools .sign').text(sign);
+
+    //Exponente
+    exp = "";
+    $(bools[1]).find('input').each(function (i, e) {
+      e = $(e);
+      text = e.is(':checked');
+      text = text ? '1' : '0';
+      exp+= text;
+    });
+    bin += exp;
+    exp = parseInt(exp, 2);
+    $('#bools .exp').text(exp);
+
+    //Mantissa
+    mant = "";
+    $(bools[2]).find('input').each(function (i, e) {
+      e = $(e);
+      text = e.is(':checked');
+      text = text ? '1' : '0';
+      mant+= text;
+    });
+    bin += mant;
+    mant = '01111111'+mant;
+    mant = parseInt(mant, 2);
+    $('#bools .mant').text(IntToFloat(mant));
+
+    //Numero
+    $('#bools .bin').text(bin);
+    $('#bools .num').text(IntToFloat(parseInt(bin, 2)));
+  }
+</script>
+
+<style type="text/css">
+  table, th, td {
+    border: 1px solid #ccc;
+  }
+</style>
+
+<table>
+  <tr>
+    <th>Numero</th>
+    <th>Binario</th>
+    <th>Exp. Binario</th>
+    <th>Exp. Decimal</th>
+    <th>Mant. Binario</th>
+    <th>Mant. Decimal</th>
+    <th>Cambiar</th>
+  </tr>
+  <tr id="tr-1">
+    <td class="num"></td>
+    <td class="bin"></td>
+    <td class="eb"></td>
+    <td class="en"></td>
+    <td class="mb"></td>
+    <td class="mn"></td>
+    <td class="change">
+      <button onclick="change('1');">Cambiar</button>
+    </td>
+  </tr>
+  <tr id="tr-2">
+    <td class="num"></td>
+    <td class="bin"></td>
+    <td class="eb"></td>
+    <td class="en"></td>
+    <td class="mb"></td>
+    <td class="mn"></td>
+    <td class="change">
+      <button onclick="change('2');">Cambiar</button>
+    </td>
+  </tr>
+  <tr id="tr-3">
+    <td class="num"></td>
+    <td class="bin"></td>
+    <td class="eb"></td>
+    <td class="en"></td>
+    <td class="mb"></td>
+    <td class="mn"></td>
+  </tr>
+</table>
+
+<table id="bools">
+  <tr>
+    <td class="bool-group" count="1"></td>
+    <td class="bool-group" count="8"></td>
+    <td class="bool-group" count="23"></td>
+    <td class="bin"></td>
+  </tr>
+  <tr>
+    <td class="sign"></td>
+    <td class="exp"></td>
+    <td class="mant"></td>
+    <td class="num"></td>
+  </tr>
+</table>

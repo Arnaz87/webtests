@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+
+<script src="jquery.js"></script>
+<script src="mylib.js"></script>
+<script src="data.js"></script>
+
+<style type="text/css">
+  pre {
+    border: 1px solid lightgray;
+  }
+</style>
+
+<html>
+<body>
+  <input id="in" type="text">
+  <br>
+  <button onclick="action()">Seleccionar</button>
+  <br>
+  <pre id="result">Resultado</pre>
+  <pre id="data">Datos</pre>
+</body>
+<script type="text/javascript">
+
+  var her = data.arnaud.complex.familia.hermanas[0];
+  her.func = function (func) {return eval(func);};
+
+  data.arnaud.simple.func = function (x) {
+    var x = x || 'No hay super X :C';
+    return x + " XD";
+  }
+
+  $('#data').text(ml.tojson(data));
+
+  function log (obj, name) {
+    if (name) {
+      console.log([name, obj]);
+    } else {
+      console.log(obj);
+    }
+  }
+
+  function action () {
+    var exp = $('#in').val();
+    var arr = exp.split(' = ');
+    var sel = arr[0];
+    if (arr.length > 1) {
+      val = arr[1];
+    } else {
+      val = undefined;
+    }
+    //console.log(her.func(sel));
+    var selected = select(data, sel, val);
+    $('#result').text(ml.tojson(selected));
+  }
+
+  function select (obj, sel, val) {
+    //var arr = makeArray(sel);
+    //console.log(arr);
+    //var selection = selectArray(obj, arr);
+    //return selection;
+
+    var setval = (val != undefined);
+
+    // Make Array
+    var str = sel;
+    str = str.replace(/\[/g, '.');
+    str = str.replace(/\]/g, '');
+    str = str.replace(/\(\)/g, '.()');
+    var arr = str.split('.');
+
+    //Select Array
+    var current = obj;
+    var last = arr.length - 1;
+    for (var i = 0; i < arr.length; i++) {
+      var sethere = (i == last) && setval;
+      next = arr[i];
+      if (next == '()') {
+        if (sethere) {
+          current = current(val);
+        } else {
+          current = current();
+        }
+      } else {
+        if (sethere) {
+          var temp = current[next];
+          current[next] = val;
+          current = temp;
+        } else {
+          current = current[next];
+        }
+      }
+    };
+    var selection = current;
+
+    return selection;
+  }
+
+  function selectArray (obj, arr) {
+    var current = obj;
+    for (var i = 0; i < arr.length; i++) {
+      next = arr[i];
+      if (next == '()') {
+        current = current();
+      } else {
+        current = current[next];
+      }
+    };
+    return current;
+  }
+
+  function makeArray (sel) {
+    str = sel;
+    str = str.replace(/\[/g, '.');
+    str = str.replace(/\]/g, '');
+    str = str.replace(/\(\)/g, '.()');
+    var arr = str.split('.');
+    return arr;
+  }
+
+</script>
+</html> 

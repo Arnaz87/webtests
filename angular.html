@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <script src=
+  "http://ajax.googleapis.com/ajax/libs/angularjs/1.2.26/angular.min.js"></script>
+  </head>
+
+  <body ng-app ng-controller="cont">
+    <h2>My Note</h2>
+
+    <textarea ng-model="message" cols="40" rows="10"></textarea>
+
+    <p>
+      <button ng-click="clear()">Clear</button>
+      <form ng-submit="save()">
+        <input type="text" ng-model="name" size="50" placeholder="Add New">
+        <input type="submit" value="Save">
+      </form>
+    </p>
+    <p>Number of characters left: <span ng-bind="left()"></span></p>
+
+    <div ng-repeat="x in saved">
+      <li>
+        <span ng-bind="x.name"></span>
+        <button ng-click="load(x)">Load</button>
+        <button ng-click="delete(x)">Delete</button>
+      </li>
+    </div>
+
+    <script>
+      function cont($scope) {
+        $scope.saved = [];
+        $scope.left  = function() {return 100 - $scope.message.length;};
+        $scope.clear = function() {$scope.message = "";};
+        $scope.save  = function() {
+          var i = $scope.saved.length
+          $scope.saved[i] = {'text': $scope.message, 'name': $scope.name};
+          alert("Note Saved");
+        };
+        $scope.load = function (x) {
+          $scope.message = x.text;
+          $scope.name = x.name;
+        };
+        $scope.delete = function (x) {
+          if (confirm('seguro que quieres borrar ' + x.name + '?')) {
+            x.nombre = 'borrado';
+            alert('borrado');
+          }
+        }
+      }
+    </script>
+  </body>
+</html>
