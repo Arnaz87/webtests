@@ -198,7 +198,19 @@
         break;
       case 'object':
         if (obj.hasOwnProperty('toString')) {
-          str += obj.toString();
+          str += obj.toString().replace(/\n/g, tab + '\n');
+        } else  if (false && obj instanceof Array) {
+          str += '\n' + tab + '[\n';
+          com = false;
+          for (var i in obj) {
+            if (com) {
+              str += ",\n";
+            } else {
+              com = true;
+            }
+            str += ml.tojson(obj[i], tab);
+          }
+          str += "\n" + tab + ']';
         } else {
           str += '\n' + tab + '{\n';
           com = false;
