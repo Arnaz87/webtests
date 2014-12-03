@@ -182,7 +182,8 @@
   ml.tojson = function (obj, tab) {
 
     var tostr = function (obj) {
-      return String('"' + obj + '"');
+      var str = String(obj);
+      return '"' + str + '"';
     }
 
     if (tab == undefined || tab == null) {
@@ -197,7 +198,9 @@
         str += tostr(obj);
         break;
       case 'object':
-        if (obj.hasOwnProperty('toString')) {
+        if (obj == null) {
+          str += 'null';
+        } else if (obj.hasOwnProperty('toString')) {
           str += obj.toString().replace(/\n/g, tab + '\n');
         } else  if (false && obj instanceof Array) {
           str += '\n' + tab + '[\n';

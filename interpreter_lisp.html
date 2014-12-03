@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <script src="jquery.js"></script>
+  <script src="mylib.js"></script>
+  <script src="data.js"></script>
+  </head>
+
+  <body ng-app="" ng-controller="cont">
+    <h2>Interpreter</h2>
+
+    <textarea id="input"></textarea>
+    <button onclick="action()">Procesar</button>
+
+    <p>
+      <pre id="debug"></pre>
+    </p>
+    
+    <p>
+      DATA:
+      <pre id="data"></pre>
+    </p>
+    <p>
+      EXP:
+      <pre id="exp"></pre>
+    </p>
+  </body>
+
+  <script>
+
+    Exp = function (val) {
+      this.val = val;
+      this.type = getType(val);
+      this.eval = function () {
+        switch (this.type) {
+          case 'num':
+          case 'hex':
+            return Number(this.val);
+            break;
+          case 'bool':
+            return this.val == false;
+            break;
+          case 'str':
+            return this.val.slice(1, this.val.length-1);
+          case 'name':
+            return this.val.slice(1, this.val.length);
+          case 'class':
+          case undefined:
+            return this.val;
+            break;
+          case 'var':
+            return data[val];
+        }
+      }
+    }
+
+    Group = function () {
+      this.val = undefined;
+      this.eval = function () {
+        var val = evalGroup(this);
+        this.val = val;
+        return val;
+      };
+    }
+
+    Group.prototype = new Array();
+
+    function getType (val) {
+      if (/^(true|false)$/.test(val)) {
+        return 'bool';
+      }
+      if (/^\d+(\.\d+)?$/.test(val)) {
+        return 'num';
+      }
+      if (/^".*"$/.test(val)) {
+        return 'str';
+      }
+      if (/^0[x,X][0-9a-fA-F]*$/.test(val)) {
+        return 'hex';
+      }
+      if (/^[a-z][a-zA-Z0-9_]*$/.test(val)) {
+        return 'var';
+      }
+      if (/^[A-Z][a-zA-Z]*$/.test(val)) {
+        return 'class';
+      }
+    }
+
+    function evalGroup (group) {
+      if (group.length == 1) {
+        return group[0].eval();
+      }
+      var op = group[0].val;
+      switch (op) {
+        case 'run':
+          for (var i = 1; i < group.length; i++) {
+            group[i].eval();
+          }
+          return null;
+          break;
+        case '=':
+          var val = group[2].eval();
+          data[group[1].val] = val;
+          return val;
+          break;
+        case '+':
+          return group[1].eval() + group[2].eval();
+          break;
+        case '*':
+          return group[1].eval() * group[2].eval();
+          break;
+        case '/':
+          return group[1].eval() / group[2].eval();
+          break;
+        case '-':
+          if (group.length == 2) {
+            return - group[1].eval();
+          } else {
+            return group[1].eval() - group[2].eval();
+          }
+          break;
+        case 'arr':
+          var arr = [];
+          for (var i = 1; i < group.length; i++) {
+            arr.push(group[i].eval());
+          }
+          return arr;
+          break;
+        case 'get':
+          return group[1].eval()[group[2].eval()];
+          break;
+        case 'set':
+          return group[1].eval()[group[2].eval()] = group[3].eval();
+          break;
+        case 'func':
+          return group[1];
+          break;
+        case 'call':
+          return group[1].eval().eval();
+          break;
+        case 'print':
+          var val = group[1].eval();
+          myprint(val, 'debug');
+          return val;
+          break;
+        case 'if':
+          if (group[1].eval()) {
+            return group[2].eval();
+          } else {
+            if (group.length > 3) {
+              return group[3].eval();
+            } else {
+              return null;
+            }
+          }
+          break;
+        case 'bool':
+          var val = group[1].eval();
+          return myBoolean(val)
+          break;
+        case 'loop':
+          var name = group[1].val;
+          var length = group[2].eval();
+          for (var i = 0; i < length; i++) {
+            data[name] = i;
+            group[3].eval();
+          }
+          return null;
+      }
+    }
+
+    data = {};
+
+    function input () {
+      return $('#input').val();
+    }
+    function output (val) {
+      $('#output').text(val);
+    }
+    function debug (val, id) {
+      mylog(val);
+      myprint(val,id);
+    }
+    function myprint (val, id) {
+      if (id) {
+        id = '#' + id;
+      } else {
+        id = '#debug';
+      }
+      $(id).text(ml.tojson(val));
+    }
+    function mylog (val) {
+
+      console.log(val);
+    }
+    function myBoolean (val) {
+      var match = /^([fF](alse|ALSE)?|[nN][oO]?)$/.test(val);
+      if (match) {
+        return false;
+      } else {
+        return Boolean(val);
+      }
+    }
+
+    function toExp (str) {
+      var level = 0;
+      var lastOpen = -1;
+      var lastClose = -1;
+      var arr = new Group();
+
+      for (var i = 0; i < str.length; i++) {
+        var ch = str[i];
+        if (ch == '(') {
+          if (level == 0) {
+            lastOpen = i;
+          }
+          level++;
+        }
+        if (ch == ')') {
+          level--;
+          if (level == 0) {
+            lastClose = i;
+            var ls = str.slice(lastOpen + 1, lastClose);
+            arr.push(toExp(ls));
+          }
+        }
+      }
+
+      if (arr.length == 0 && str.length > 0) {
+        return new Exp(str);
+      }
+
+      return arr;
+    }
+
+    function action () {
+      var mainCmd = input();
+      var mainExp = toExp(mainCmd);
+      var result = mainExp.eval();
+      myprint(data, 'data');
+      //debug(mainExp, 'exp');
+      console.log(result);
+    }
+  </script>
+</html>
