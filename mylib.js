@@ -179,17 +179,11 @@
     form.append(inp);
   }
 
-  ml.tojson = function (obj, tab) {
+  ml.tojson = function (obj) {
 
     var tostr = function (obj) {
       var str = String(obj);
       return '"' + str + '"';
-    }
-
-    if (tab == undefined || tab == null) {
-      tab = "";
-    } else {
-      tab = tab + "  ";
     }
 
     str = "";
@@ -201,33 +195,32 @@
         if (obj == null) {
           str += 'null';
         } else if (obj.hasOwnProperty('toString')) {
-          str += obj.toString().replace(/\n/g, tab + '\n');
+          str += obj.toString();
         } else  if (false && obj instanceof Array) {
-          str += '\n' + tab + '[\n';
+          str += '[';
           com = false;
           for (var i in obj) {
             if (com) {
-              str += ",\n";
+              str += ",";
             } else {
               com = true;
             }
-            str += ml.tojson(obj[i], tab);
+            str += ml.tojson(obj[i]);
           }
-          str += "\n" + tab + ']';
+          str += ']';
         } else {
-          str += '\n' + tab + '{\n';
+          str += '{';
           com = false;
           for (var i in obj) {
             if (com) {
-              str += ",\n";
+              str += ",";
             } else {
               com = true;
             }
-            str += tab;
             str += tostr(i) + ": ";
-            str += ml.tojson(obj[i], tab);
+            str += ml.tojson(obj[i]);
           }
-          str += "\n" + tab + '}';
+          str += '}';
         }
         break;
       case 'number':
@@ -247,4 +240,65 @@
         break;
     }
     return str;
+  }
+
+  ml.tobeauty = function (obj) {
+    var str = ml.tojson(obj);
+    return ml.beautify(str);
+  }
+
+  ml.beautify = function (str) {
+    var levels = [];
+    var ch;
+    var newstr = "";
+    var laststop = 0;
+    var insert = function (i, val) {
+      val = tab();
+      var first = str.slice(laststop, i);
+      laststop = i;
+      newstr += first + val;
+    }
+    var tab = function () {
+      var val = "\n";
+      for (var i = 0; i < levels.length; i++) {
+        val += "  ";
+      }
+      return val;
+    }
+    var level = function (comp) {
+      var lev = levels[levels.length];
+      if (comp) {
+        return lev == comp;
+      } else {
+        return lev;
+      }
+    }
+    for (var i = 0; i < str.length; i++) {
+      ch = str[i];
+      if (ch == '{') {
+        insert(i);
+        levels.push('obj');
+        insert(i+1);
+      }
+      if (ch == '}') {
+        levels.pop();
+        insert(i);
+      }
+      if (ch == '[') {
+        insert(i);
+        levels.push('arr');
+        insert(i+1);
+      }
+      if (ch == ']') {
+        levels.pop();
+        insert(i);
+      }
+      if (ch == ',') {
+        insert(i+1);
+      }
+      if (i == str.length-1) {
+        insert(i+1, "");
+      }
+    }
+    return newstr;
   }

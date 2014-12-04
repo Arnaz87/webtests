@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <script src="jquery.js"></script>
+  <script src="mylib.js"></script>
+  <script src="data.js"></script>
+  </head>
+
+  <body ng-app="" ng-controller="cont">
+    <h2>Interpreter</h2>
+
+    <textarea id="input"></textarea>
+    <button onclick="action()">Procesar</button>
+
+    <p>
+      <pre id="debug"></pre>
+    </p>
+    
+    <p>
+      DATA:
+      <pre id="data"></pre>
+    </p>
+    <p>
+      EXP:
+      <pre id="exp"></pre>
+    </p>
+  </body>
+
+  <script>
+
+    Exp = function (val) {
+      this.val = val;
+    }
+
+    Group = function () {
+      this.add = function (val) {
+        if (!/^ *$/.test(val)) {
+          this.push(val);
+        }
+      }
+      this.toString = function () {
+        var str = '{';
+        var com = false;
+        for (var i = 0; i < this.length; i++) {
+          if (com) {
+            str += ',';
+          } else {
+            com = true;
+          }
+          str += i + ': ' + ml.tojson(this[i]);
+        }
+        str += '}';
+        return str;
+      }
+    }
+
+    Group.prototype = new Array();
+
+    data = {};
+
+    function input () {
+      return $('#input').val();
+    }
+    function output (val) {
+      $('#output').text(val);
+    }
+    function debug (val, id) {
+      mylog(val);
+      myprint(val,id);
+    }
+    function myprint (val, id) {
+      if (id) {
+        id = '#' + id;
+      } else {
+        id = '#debug';
+      }
+      $(id).text(ml.tobeauty(val));
+    }
+    function mylog (val) {
+
+      console.log(val);
+    }
+
+    function toGroup (str) {
+
+      var level = 0;
+      var lastOpen  = 0;
+      var lastClose = 0;
+      var lastSpace = 0;
+      var arr = new Group();
+
+      str += ' ';
+
+      for (var i = 0; i < str.length; i++) {
+        var ch = str[i];
+        if (ch == '(') {
+          if (level == 0) {
+            lastOpen = i;
+          }
+          level++;
+        }
+        if (ch == ')') {
+          level--;
+          if (level == 0) {
+            var tx = str.slice(lastOpen + 1, i);
+            arr.add(toGroup(tx));
+            lastSpace = i+1;
+            lastClose = i;
+          }
+        }
+        if (ch == ' ' && level == 0) {
+          var tx = str.slice(lastSpace, i);
+          lastSpace = i+1;
+          arr.add(tx);
+        }
+      }
+
+      return arr;
+    }
+
+    function action () {
+      var mainCmd = input();
+      var mainExp = toGroup(mainCmd);
+      //var result = mainExp.eval();
+      //myprint(data, 'data');
+      debug(mainExp, 'exp');
+      //console.log(result);
+    }
+  </script>
+</html>
