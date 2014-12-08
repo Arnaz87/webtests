@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Regular Expressions</title>
+  <script src="jquery.js"></script>
+</head>
+<body>
+
+  <input id="str"> String<br>
+  <input id="exp"> Regexp<br>
+  <input id="res" value="holas" disabled> Resultado<br>
+  <button onclick="action()">Probar</button>
+
+</body>
+<script type="text/javascript">
+
+  TokenList = function (arr) {
+    var tokens = arr;
+    var i = 0;
+    var current = true;
+    this.count = 0;
+    this.result = false;
+    this.eval = function (ch) {
+      if (this.result) {
+        return true;
+      }
+      current = arr[i].eval(ch);
+      if (current) {
+        i++;
+        if (i == arr.length) {
+          this.result = true;
+        }
+      } else {
+        i = 0;
+      }
+      this.count = i;
+      return current;
+    }
+  }
+  
+  Token = function () {}
+  Token.prototype = {
+    "eval": function (comp) {}
+  }
+
+  Letter = function (val) {
+    this.val = val;
+    this.eval = function (comp) {
+      return comp == this.val;
+    }
+  }
+
+  All = {
+    "eval": function (comp) {return true;}
+  }
+
+  Any = function (val) {
+    this.val = toExp(val);
+    this.eval = function (comp) {
+      for (var i = 0; i < this.val.length; i++) {
+        if (this.val[i].eval(comp)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  function action () {
+    var str = $('#str').val();
+    var inp = $('#exp').val();
+    var exp = toExp(inp);
+    console.log(exp);
+    var result = expEval(str, exp);
+    $('#res').val(result);
+  }
+
+  function expEval (str, exp) {
+    var go = true;
+    var result = true;
+    var tokens = new TokenList(exp);
+    var i = 0, j = 0;
+    while (go == true) {
+      var ch = str[i];
+      tokens.eval(ch);
+      i++;
+      if (i >= str.length) {
+        go = false;
+      }
+    }
+    return tokens.result;
+  }
+
+  function toExp (str) {
+    var arr = [];
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i];
+      if (ch == '.') {
+        arr.push(All);
+      } else if (ch == '[') {
+        var start = i+1;
+        var end = start;
+        var go = true;
+        while (go) {
+          ch = str[i];
+          if (ch == ']') {
+            go = false;
+            end = i;
+          }
+          i++;
+          if (i >= str.length) {
+            go = false;
+          }
+        }
+        var tx = str.slice(start, end);
+        arr.push(new Any(tx));
+      } else {
+        arr.push(new Letter(ch));
+      }
+    };
+    return arr;
+  }
+
+</script>
+</html>
