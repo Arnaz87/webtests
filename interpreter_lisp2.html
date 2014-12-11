@@ -28,58 +28,133 @@
 
   <script>
 
-    Exp = function (val) {
-      this.val = val;
-    }
-
-    Group = function () {
-      this.add = function (val) {
-        if (!/^ *$/.test(val)) {
-          this.push(val);
-        }
-      }
-      this.toString = function () {
-        var str = '{';
-        var com = false;
-        for (var i = 0; i < this.length; i++) {
-          if (com) {
-            str += ',';
-          } else {
-            com = true;
+    // CLasses
+      Atom = function (val) {
+        this.str = val;
+        this.type = 'undefined';
+        this.class = 'undefined';
+        // Numeric types
+          if (/^[0-9]+$/.test(val)) {
+            this.type = 'int';
+            this.val = Number(val);
           }
-          str += i + ': ' + ml.tojson(this[i]);
+          if (/^[0-9]+\.[0-9]+$/.test(val)) {
+            this.type = 'float';
+            this.val = Number(val);
+          }
+          if (/^0[xX][0-9a-fA-F]+$/.test(val)) {
+            this.type = 'hex';
+            var tx = val.slice(2, val.length);
+            this.val = parseInt(tx, 16);
+          }
+          if (/^0[bB][01]+$/.test(val)) {
+            this.type = 'bin';
+            var tx = val.slice(2, val.length);
+            this.val = parseInt(tx, 2);
+          }
+        // Other types
+          if (/^".*"$/.test(val)) {
+            this.type = 'string';
+            this.val = val.slice(1, val.length - 1);
+          }
+          if (/^:[a-z0-9_]+$/.test(val)) {
+            this.type = 'key';
+            this.val = val.slice(1, val.length);
+          }
+          if (/^[a-z][a-zA-Z0-9_]*$/.test(val)) {
+            this.type = 'var';
+            this.val = val;
+          }
+          if (/^[A-Z][a-zA-Z0-9]*$/.test(val)) {
+            this.type = 'const';
+            this.val = val;
+          }
+          if (/^(true|false)$/.test(val)) {
+            this.type = 'bool';
+            this.val = val == 'true';
+          }
+          if (/^ *$/.test(val)) {
+            this.type = 'empty';
+            this.val = null;
+          }
+        // End of types
+
+        this.eval = function () {return this.val;};
+        if (this.type == 'var') {
+          this.eval = function (cont, params) {
+            var key = this.val;
+            var val = params[key];
+            if (val == undefined) {val = cont[key];}
+            return val;
+          };
         }
-        str += '}';
-        return str;
+
+        this.toString = function () {
+          if (this.type == 'undefined') {
+            return this.str;
+          }
+          return this.type + '(' + String(this.val) + ')';
+        }
       }
-    }
 
-    Group.prototype = new Array();
-
-    data = {};
-
-    function input () {
-      return $('#input').val();
-    }
-    function output (val) {
-      $('#output').text(val);
-    }
-    function debug (val, id) {
-      mylog(val);
-      myprint(val,id);
-    }
-    function myprint (val, id) {
-      if (id) {
-        id = '#' + id;
-      } else {
-        id = '#debug';
+      Group = function () {
+        this.add = function (val) {
+          if (val.type != 'empty') {
+            this.push(val);
+          }
+        }
+        this.eval = function (cont, params) {
+          return evalGroup(this, cont, params);
+        }
+        this.toString = function () {
+          var str = 'Group{';
+          var com = false;
+          for (var i = 0; i < this.length; i++) {
+            if (com) {
+              str += ',';
+            } else {
+              com = true;
+            }
+            str += i + ': ' + ml.tojson(this[i]);
+          }
+          str += '}';
+          return str;
+        }
       }
-      $(id).text(ml.tobeauty(val));
-    }
-    function mylog (val) {
 
-      console.log(val);
-    }
+      Group.prototype = new Array();
+    // end
+
+    var data = {};
+    var classes = {};
+    var mainExp;
+
+    // input, output & debug.
+      function input () {
+
+        return $('#input').val();
+      }
+      function output (val) {
+
+        $('#output').text(val);
+      }
+      function debug (val, id) {
+        mylog(val);
+        myprint(val,id);
+      }
+      function myprint (val, id) {
+        if (id) {
+          id = '#' + id;
+        } else {
+          id = '#debug';
+        }
+        $(id).text(ml.tobeauty(val));
+      }
+      function mylog (val) {
+
+        console.log(val);
+      }
+    // end
 
     function toGroup (str) {
 
@@ -87,9 +162,11 @@
       var lastOpen  = 0;
       var lastClose = 0;
       var lastSpace = 0;
-      var arr = new Group();
+      var group = new Group();
 
-      str += ' ';
+      str = str.replace(/\n/g, ' ')
+                .replace(/\(/g, ' (')
+                .replace(/\)/g, ' )') + ' ';
 
       for (var i = 0; i < str.length; i++) {
         var ch = str[i];
@@ -103,26 +180,122 @@
           level--;
           if (level == 0) {
             var tx = str.slice(lastOpen + 1, i);
-            arr.add(toGroup(tx));
+            group.add(toGroup(tx));
             lastSpace = i+1;
             lastClose = i;
           }
         }
         if (ch == ' ' && level == 0) {
           var tx = str.slice(lastSpace, i);
+          if (group.length == 0) {
+            var exp = tx;
+          } else {
+            var exp = new Atom(tx);
+          }
           lastSpace = i+1;
-          arr.add(tx);
+          group.add(exp);
         }
       }
 
-      return arr;
+      return group;
+    }
+
+    function evalGroup (group, cont) {
+      var get = function (key) {return group[key].eval(cont, params);};
+      switch (group[0]) {
+        case 'run':
+          for (var i = 1; i < group.length; i++) {
+            group[i].eval(cont);
+          };
+          return null;
+
+        case '=':
+          var val = get(2);
+          cont[get(1)] = val;
+          return val;
+        case '$':
+          return val = cont[key];
+
+        case '+':
+          return get(1) + get(2);
+        case '-':
+          return get(1) - get(2);
+        case '*':
+          return get(1) * get(2);
+        case '/':
+          return get(1) / get(2);
+        case '%':
+          return get(1) % get(2);
+        case '&':
+          return get(1) & get(2);
+        case '|':
+          return get(1) | get(2);
+        case '^':
+          return get(1) ^ get(2);
+
+        case 'arr':
+          var val = [];
+          for (var i = 1; i < group.length; i++) {
+            val.push(get(i));
+          };
+          return val;
+        case 'obj':
+          var val = {};
+          for (var i = 1; i < group.length; i += 2) {
+            val[get(i)] = get(i + 1);
+          };
+          return val;
+        case 'bool':
+          var val = get(1);
+          if (typeof val == 'number') {
+            return val > 0;
+          }
+          if (typeof val == 'string') {
+            return !/^([fF](alse)?|[nN]o?|FALSE|NO)?$/.test(val);
+          }
+          return Boolean(val);
+
+        case 'set':
+          var obj = get(1);
+          var key = get(2);
+          var val = get(3);
+          obj[key] = val;
+          return obj;
+        case 'get':
+          var obj = get(1);
+          var key = get(2);
+          return obj[key];
+
+        case 'func':
+          return group[1];
+        case 'call':
+          return get(1).eval(cont);
+        case 'method':
+          var obj = get(1);
+          return obj[get(2)].eval(obj);
+
+        case 'loop':
+          for (var i = get(2); i <= get(3); i++) {
+            cont[group[1].val] = i;
+            group[4].eval(cont);
+          }
+          return null;
+        case 'if':
+          if (get(1)) {
+            return get(2);
+          }
+          if (group.length > 3) {
+            return get(3);
+          }
+          return null;
+      }
     }
 
     function action () {
       var mainCmd = input();
-      var mainExp = toGroup(mainCmd);
-      //var result = mainExp.eval();
-      //myprint(data, 'data');
+      mainExp = toGroup(mainCmd);
+      var result = mainExp.eval(data);
+      myprint(data, 'data');
       debug(mainExp, 'exp');
       //console.log(result);
     }
