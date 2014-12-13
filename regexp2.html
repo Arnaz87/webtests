@@ -10,28 +10,73 @@
   <input id="str"> String<br>
   <input id="exp"> Regexp<br>
   <input id="res" value="holas" disabled> Resultado<br>
-  <button onclick="postToAuto()">Probar</button>
+  <button onclick="postToNFA()">Probar</button>
 
 </body>
 <script type="text/javascript">
 
-  var State = function (ch) {
-    this.ch = ch; //String
-    this.out = null; //Node
+  var State = function () {
+    this.out = null; //State
+    this.connect = function (end) {
+      this.out = end;
+    }
+    this.eval = function (val) {
+      // Return an int indicating the state:
+      // 0 FAIL: stop the expression or at least this thread.
+      // 1 PASS: go to the next state and increment the char.
+      // 2 JUMP: go to the next state but stay in this char.
+      // 3 SPLIT: same as jump but this state has many next states.
+      return 0;
+    }
   }
-  State.prototype = new Array();
 
-  function postToAuto (str) {
+  var Char = function (ch) {
+    this.ch = ch;
+    this.eval = function (val) {
+      if (val == this.ch) {
+        return 1; // PASS
+      } else {
+        return 0; // FAIL
+      }
+    }
+  }
+
+  var Jump = function () {
+    this.eval = function () {
+      return 2; //JUMP
+    }
+  }
+
+  var Split = function (o1, o2) {
+    this.out1 = o1;
+    this.out2 = o2;
+  }
+
+  Char.prototype = new State();
+  Jump.prototype = new State();
+  //Split.prototype = new State();
+
+  var Frag = function (start, out) {
+    this.start = start;
+    this.out = out;
+    this.connect = function (val) {
+      this.out.connect(val.start);
+    }
+  }
+
+  function postToNFA (str) {
     str = $('#exp').val();
 
     var stack = [];
+    var first = null;
 
     var pop = function () {return stack.pop();};
-    var push = function (val) {stack.push(val);};
-
-    var before = function (val) {
-      return stack[stack.length - (val || 1)]
-    }
+    var push = function (val) {
+      if (stack.length == 0 && first == null) {
+        first = val;
+      }
+      stack.push(val);
+    };
 
     for (var i = 0; i < str.length; i++) {
       var ch = str[i];
@@ -39,25 +84,54 @@
         case '.':
           var e2 = pop();
           var e1 = pop();
-          e1.push(e2);
-          push(e1);
-          push(e2);
+          e1.out.out = e2.start;
+          var f = new Frag(e1.start, e2.out);
+          push(f);
           break;
         case '|':
           var e2 = pop();
           var e1 = pop();
-          var s = new State(ch);
-          s.push(e1);
-          s.push(e2);
-          push(s);
+          var start = new Split(e1.start, e2.start);
+          var end = new Jump();
+          e1.out.out = end;
+          e2.out.out = end;
+          var f = new Frag(start, end);
+          push(f);
+          break;
+        case '?':
+          var e1 = pop();
+          var end = new Jump();
+          var start = new Split(e1.start, end);
+          e1.out.out = end;
+          var f = new Frag(start, end);
+          push(f);
+          break;
+        case '*':
+          var e1 = pop();
+          var end = new Jump();
+          var start = new Split(e1.start, end);
+          e1.out.out = start;
+          var f = new Frag(start, end);
+          push(f);
+          break;
+        case '+':
+          var e1 = pop();
+          var end = new Jump();
+          var split = new Split(e1.start, end);
+          e1.out.out = split;
+          var f = new Frag(e1.start, end);
+          push(f);
           break;
         default:
-          var s = new State(ch);
+          var s = new Char(ch);
+          var f = new Frag(s, s);
+          push(f);
           break;
       }
     }
 
     console.log(stack);
+    window.first = first.start;
   }
 
 </script>
