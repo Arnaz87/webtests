@@ -26,6 +26,7 @@
       // 1 PASS: go to the next state and increment the char.
       // 2 JUMP: go to the next state but stay in this char.
       // 3 SPLIT: same as jump but this state has many next states.
+      // 4 FINAL: final state.
       return 0;
     }
   }
@@ -50,6 +51,9 @@
   var Split = function (o1, o2) {
     this.out1 = o1;
     this.out2 = o2;
+    this.eval = function () {
+      return 3;
+    }
   }
 
   var Final = function () {
@@ -68,6 +72,11 @@
     this.connect = function (val) {
       this.out.connect(val.start);
     }
+  }
+  var Pos = function (i, state) {
+    this.i = i;
+    this.state = state;
+    this.checked = false;
   }
 
   function postToNFA (str) {
@@ -142,6 +151,59 @@
 
     console.log(stack);
     window.first = first.start;
+
+    var result = run(first.start);
+    $('#res').val(result);
+    console.log(result);
+  }
+
+  function run (start) {
+    var str = $('#str').val();
+    var stack = [];
+    var pos = new Pos(0, start);
+    var cont = true;
+    var result = false;
+    stack.push(pos);
+
+    var eval = function (mPos) {
+      var ch = str[mPos.i];
+      return mPos.state.eval(ch);
+    }
+
+    while (cont) {
+      var pos = stack.pop();
+      switch (eval(pos)) {
+        case 0:
+          cont = stack.length > 0;
+          break;
+        case 1:
+          var npos = new Pos(pos.i + 1, pos.state.out);
+          stack.push(npos);
+          break;
+        case 2:
+          var npos = new Pos(pos.i, pos.state.out);
+          stack.push(npos);
+          break;
+        case 3:
+          if (!pos.checked) {
+            pos.checked = true;
+            var npos = new Pos(pos.i, pos.state.out1);
+            stack.push(pos);
+            stack.push(npos);
+          } else {
+            var npos = new Pos(pos.i, pos.state.out2);
+            stack.push(npos);
+          }
+          break;
+        case 4:
+          cont = false;
+          result = pos.i;
+          break;
+      }
+    }
+
+    return (result) ? (result == str.length) : false;
+
   }
 
 </script>

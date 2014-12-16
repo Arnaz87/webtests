@@ -7,7 +7,8 @@
 <body>
   <input id="in">In<br>
   <input id="out">Out<br>
-  <button onclick="action()">Procesar</button>
+  <button onclick="action()">Procesar</button> <br>
+  <input id="set"> Regex, Math
 </body>
 <script type="text/javascript">
 
@@ -38,7 +39,7 @@
     var out = "";
     var stack = [];
 
-    var set = ops["math"];
+    var set = ops[$('#set').val()];
 
     var add = function (ch) {
       out = out + ch;
