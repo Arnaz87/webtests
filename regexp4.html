@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Regular Expressions</title>
+  <script src="jquery.js"></script>
+</head>
+<body>
+
+  <input id="str"> String<br>
+  <input id="exp"> Regexp<br>
+  <input id="res" value="holas" disabled> Resultado<br>
+  <button onclick="postToNFA()">Probar</button>
+
+  <p>Este elimina los estados de salto del nfa (los que no consumen caracteres, o sea, Jump y Split) y vinculan sus salidas directamente con el estado anterior.</p>
+
+  <p>Después trata de eliminar las salidas repetidas, creando un nuevo estado con la letra que se compartía y concatenando todas sus salidas.</p>
+
+  <p>Pero este ultimo paso no funciona bien en los estados bucles, o sea, + y *, cuando se encuentra otro estado con la misma letra</p>
+
+</body>
+<script type="text/javascript">
+
+  var Det = function (ch) {
+    this.ch = ch;
+    this.out = [];
+    this.end = false;
+    this.eval = function (val) {
+      if (val == this.ch) {
+        if (this.end) {
+          return 4; // END
+        } else {
+          return 1; // PASS
+        }
+      } else {
+        return 0; // FAIL
+      }
+    }
+    this.add = function (val) {
+      if (val) {
+        if (val instanceof Array) {
+          this.out = this.out.concat(val);
+        } else {
+          this.out.push(val);
+        }
+      }
+    }
+  }
+
+  var State = function () {
+    this.out = null; //State
+    this.connect = function (end) {
+      this.out = end;
+    }
+    this.eval = function (val) {
+      // Return an int indicating the state:
+      // 0 FAIL: stop the expression or at least this thread.
+      // 1 PASS: go to the next state and increment the char.
+      // 2 JUMP: go to the next state but stay in this char.
+      // 3 SPLIT: same as jump but this state has many next states.
+      return 0;
+    }
+  }
+
+  var Char = function (ch) {
+    this.ch = ch;
+    this.eval = function (val) {
+      if (val == this.ch) {
+        return 1; // PASS
+      } else {
+        return 0; // FAIL
+      }
+    }
+    this.const = null;
+  }
+
+  var Jump = function () {
+    this.eval = function () {
+      return 2; //JUMP
+    }
+    this.const = 2;
+  }
+
+  var Split = function (o1, o2) {
+    this.out1 = o1;
+    this.out2 = o2;
+    this.const = 3;
+  }
+
+  var Final = function () {
+    this.eval = function () {
+      return 4;
+    }
+    this.const = 4;
+  }
+
+  Char.prototype = new State();
+  Jump.prototype = new State();
+  //Split.prototype = new State();
+
+  var Frag = function (start, out) {
+    this.start = start;
+    this.out = out;
+    this.connect = function (val) {
+      this.out.connect(val.start);
+    }
+  }
+
+  function postToNFA (str) {
+    str = $('#exp').val();
+
+    var stack = [];
+    var first = null;
+
+    var pop = function () {return stack.pop();};
+    var push = function (val) {
+      if (stack.length == 0 && first == null) {
+        first = val;
+      }
+      stack.push(val);
+    };
+
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i];
+      switch (ch) {
+        case '.':
+          var e2 = pop();
+          var e1 = pop();
+          e1.out.out = e2.start;
+          var f = new Frag(e1.start, e2.out);
+          push(f);
+          break;
+        case '|':
+          var e2 = pop();
+          var e1 = pop();
+          var start = new Split(e1.start, e2.start);
+          var end = new Jump();
+          e1.out.out = end;
+          e2.out.out = end;
+          var f = new Frag(start, end);
+          push(f);
+          break;
+        case '?':
+          var e1 = pop();
+          var end = new Jump();
+          var start = new Split(e1.start, end);
+          e1.out.out = end;
+          var f = new Frag(start, end);
+          push(f);
+          break;
+        case '*':
+          var e1 = pop();
+          var end = new Jump();
+          var start = new Split(e1.start, end);
+          e1.out.out = start;
+          var f = new Frag(start, end);
+          push(f);
+          break;
+        case '+':
+          var e1 = pop();
+          var end = new Jump();
+          var split = new Split(e1.start, end);
+          e1.out.out = split;
+          var f = new Frag(e1.start, end);
+          push(f);
+          break;
+        default:
+          var s = new Char(ch);
+          var f = new Frag(s, s);
+          push(f);
+          break;
+      }
+    }
+
+    var f1 = pop();
+    f1.out.out = new Final();
+    push(f1);
+
+    console.log(first.start);
+    window.nfa = first.start;
+
+    var result = toDfa(first.start);
+    window.dfa = result;
+    console.log(result);
+    noRepeat(result);
+  }
+
+  function noRepeat (dfa) {
+    dfa.rep = true;
+    var len = dfa.out.length;
+    for (var i = 0; i < len; i++) {
+      for (var j = i+1; j < len; j++) {
+        var o1 = dfa.out[i];
+        var o2 = dfa.out[j];
+        if (o1.ch == o2.ch) {
+          o1.add(o2.out);
+          dfa.out.splice(j,1);
+        }
+        len = dfa.out.length;
+      }
+    }
+    for (var k = 0; k < len; k++) {
+      var o = dfa.out[k];
+      if (!o.rep) {
+        noRepeat(o);
+      }
+    }
+  }
+
+  function combine (e1, e2) {
+    var arr = [];
+    if (e1 instanceof Array) {
+      arr = arr.concat(e1);
+    } else {
+      arr.push(e1);
+    }
+
+    if (e2 instanceof Array) {
+      arr = arr.concat(e2);
+    } else {
+      arr.push(e2);
+    }
+    return arr;
+  }
+
+  function toDfa (nfa) {
+    if (!nfa) {
+      return null;
+    }
+    if (nfa.dfa) {
+      return nfa.dfa;
+    }
+    if (nfa.const == null) {
+      var dfa = new Det(nfa.ch);
+      nfa.dfa = dfa;
+
+      dfa.add(toDfa(nfa.out));
+      return dfa;
+    }
+    if (nfa.const == 2) {
+      var dfa = toDfa(nfa.out);
+      nfa.dfa = dfa;
+      return dfa;
+    }
+    if (nfa.const == 3) {
+      var dfa = combine(toDfa(nfa.out1), toDfa(nfa.out2));
+      nfa.dfa = dfa;
+      return dfa;
+    }
+  }
+
+</script>
+</html>
