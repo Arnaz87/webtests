@@ -16,7 +16,9 @@
 
   <p>Después trata de eliminar las salidas repetidas, creando un nuevo estado con la letra que se compartía y concatenando todas sus salidas.</p>
 
-  <p>Pero este ultimo paso no funciona bien en los estados bucles, o sea, + y *, cuando se encuentra otro estado con la misma letra</p>
+  <p>Pero este ultimo paso no funciona bien en los estados bucles, o sea, + y *, cuando se encuentra otro estado con la misma letra, por ejemplo:
+  <br/>
+  (ab|ac) funciona con dos opciones que empiezan con la misma letra, pero (a+|ac) no funciona, ambas opciones empiezan con la misma letra pero una de ellas es un bucle. Por otro lado, (ab+|ac) sí funciona porque el bucle no esta en la letra repetida.</p>
 
 </body>
 <script type="text/javascript">

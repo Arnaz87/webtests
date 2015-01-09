@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Non Deterministic Finite Automata</title>
+  <script src="jquery.js"></script>
+  <script src="fsm.js"></script>
+</head>
+<body>
+
+</body>
+<script type="text/javascript">
+  /*
+  Link = function (ch, out) {
+    this.ch = ch;
+    this.out = out;
+    this.eval = function (ch) {
+      if (this.ch == "") {
+        return 2; // 2 significa JUMP, pasa al siguiente estado pero en el mismo caracter.
+      }
+      if (this.ch == ch) {
+        return 1; // 1 significa PASS, pasa al siguiente estado y al siguiente caracter.
+      }
+      return 0;   // 0 significa FAIL, no pasa al siguiente estado y rompe el automata.
+    }
+  }
+
+  State = function (links, end) {
+    if (links == null || links == undefined) {
+      links = [];
+    }
+    this.links = links;
+    this.length = links.length;
+    this.push = function (link) {
+      this.links.push(link);
+      this.length += 1;
+    }
+    this.get = function (i) {
+      return links[i];
+    }
+    this.evalAt = function (ch, i) {
+      return links[i].eval(ch);
+    }
+    if (end) {
+      this.end = true;
+    } else {
+      this.end = false;
+    }
+  }
+
+  Pos = function (i) {
+    this.i = i;
+    this.state = states[i];
+    this.length = this.state.length;
+  }
+
+  var states = {
+    1: new State([new Link("a", 2)]),
+    2: new State([new Link("b", 2), new Link("", 3)]),
+    3: new State([new Link("c", "end")]),
+    "end": new State([], true)
+  };
+
+  var positions = [new Pos(1)];
+
+  function evalPos (ch) {
+    var pos = positions.pop();
+    var link;
+    for (var i = 0; i < pos.length; i++) {
+      link = pos.state.get(i);
+      if (link.eval(ch)) {
+        positions.push(new Pos(link.out));
+      }
+    }
+
+    console.log(positions);
+  }
+  */
+</script>
+</html>

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Regular Expressions</title>
   <script src="jquery.js"></script>
+  <script src="in2po.js"></script>
 </head>
 <body>
 
@@ -70,7 +71,7 @@
     this.start = start;
     this.out = out;
     this.connect = function (val) {
-      this.out.connect(val.start);
+      this.out.out = val;
     }
   }
   var Pos = function (i, state) {
@@ -81,6 +82,7 @@
 
   function postToNFA (str) {
     str = $('#exp').val();
+    str = in2po(str);
 
     var stack = [];
     var first = null;
@@ -99,7 +101,7 @@
         case '.':
           var e2 = pop();
           var e1 = pop();
-          e1.out.out = e2.start;
+          e1.connect(e2.start);
           var f = new Frag(e1.start, e2.out);
           push(f);
           break;
@@ -108,8 +110,8 @@
           var e1 = pop();
           var start = new Split(e1.start, e2.start);
           var end = new Jump();
-          e1.out.out = end;
-          e2.out.out = end;
+          e1.connect(end);
+          e2.connect(end);
           var f = new Frag(start, end);
           push(f);
           break;
@@ -117,7 +119,7 @@
           var e1 = pop();
           var end = new Jump();
           var start = new Split(e1.start, end);
-          e1.out.out = end;
+          e1.connect(end);
           var f = new Frag(start, end);
           push(f);
           break;
@@ -125,7 +127,7 @@
           var e1 = pop();
           var end = new Jump();
           var start = new Split(e1.start, end);
-          e1.out.out = start;
+          e1.connect(start);
           var f = new Frag(start, end);
           push(f);
           break;
@@ -133,7 +135,7 @@
           var e1 = pop();
           var end = new Jump();
           var split = new Split(e1.start, end);
-          e1.out.out = split;
+          e1.connect(split);
           var f = new Frag(e1.start, end);
           push(f);
           break;
