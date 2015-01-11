@@ -101,15 +101,39 @@ fsm.str = new Object();
     delimitados entre paréntesis, no por coma, e indicando el final del
     estado con un punto y coma.
     Nombre:(Link1)(Link2)(Link3);
-    El nombre de un estado empieza con un asterisco si es un estado final.
+    Si un estado es final, se pone un asterisco al principio del nombre
+    o después de los dos puntos.
     Un link esta formado por un caracter, una coma y el nombre de un estado.
     Ejemplo de una máquina:
     1:(a,1)(b,2);*2:(a,1)(b,2);
     */
 
+  /* Algoritmo
+    Este algoritmo está basado en las tecnicas de las maquinas virtuales.
+    Interpreta el formato como un lenguaje de notación postfijo.
+    Algunos caracteres se interpretan como comandos y el resto como texto.
+    Los límites indican donde comienza y termina una porción de texto.
+    Existen dos límites, el inicio y el final.
+    Cuando se marca un limite, siempre se marca el final, y el que antes
+    era el límite final pasa a ser el límite de inicio.
+    Por ejemplo si los límites son 0 y 5, esto representa todo el texto que
+    se encuentra entre estas dos posiciones. Si se marca un límite 10,
+    el texto 0,5 se remplaz por el texto entre 5 y 10.
+    Todos los comandos marcan el caracter en que se encuentran y actuan
+    como delimitadores en el texto.
+
+    La explicación de los comandos:
+    ; guarda el estado anterior y crea uno nuevo.
+    : asigna el texto marcado como nombre para el estado actual.
+    ( crea un nuevo Link.
+    , asigna el texto marcado como caracter del Link.
+    ) asigna el texto marcado como direccion del link y lo guarda en el estado actual.
+    * indica que el estado actual es un estado final.
+
+    */
+
   fsm.format_compile = function (str) {
     var mach = new fsm.Machine();
-    //var mach = {};
 
     var mark1 = 0, mark2 = -1;
     var name = null;
@@ -127,6 +151,7 @@ fsm.str = new Object();
 
     for (var i = 0; i < str.length; i++) {
       var ch = str[i];
+
       if (ch == ";") {
         mark(i);
         mach[name] = state;
@@ -153,6 +178,7 @@ fsm.str = new Object();
         mark(i);
         state.end = true;
       }
+
     };
     return mach;
   }
