@@ -41,6 +41,9 @@ fsm = new Object();
     }
     this.toString = function () {
       var str = "";
+      if (this.end) {
+        str += "*";
+      }
       for (var i = 0; i < this.length; i++) {
         str += this.links[i].toString();
       };
@@ -106,42 +109,49 @@ fsm.str = new Object();
 
   fsm.format_compile = function (str) {
     var mach = new fsm.Machine();
+    //var mach = {};
 
-    var linestart = 0;
-    var colon = 0;
-    var linkstart = 0;
+    var mark1 = 0, mark2 = -1;
     var name = null;
-    var state = null;
+    var state = new fsm.State();
+    var link = null;
 
-    var link = function (start, end) {
-      var comma;
-      for (var i = start; i < end; i++) {
-        if (str[i] == ",") {
-          comma = i;
-        }
-      }
-      var ch = str.slice(start, comma);
-      var out = str.slice(comma + 1,  end);
-      return new fsm.Link(ch, out);
+    var mark = function (val) {
+      mark1 = mark2 + 1;
+      mark2 = val;
+    }
+
+    var marked = function () {
+      return str.slice(mark1, mark2);
     }
 
     for (var i = 0; i < str.length; i++) {
       var ch = str[i];
-      if (ch == ";") { // End of line
+      if (ch == ";") {
+        mark(i);
         mach[name] = state;
-        linestart = i + 1;
-        i += 1;
-      }
-      if (ch == ":") { // Name
-        colon = i;
-        name = str.slice(linestart, i);
         state = new fsm.State();
       }
-      if (ch == "(") { // Link Start
-        linkstart = i + 1;
+      if (ch == ":") {
+        mark(i);
+        name = marked();
       }
-      if (ch == ")") { // Link End
-        state.push(link(linkstart, i));
+      if (ch == "(") {
+        mark(i);
+        link = new fsm.Link();
+      }
+      if (ch == ")") {
+        mark(i);
+        link.out = marked();
+        state.push(link);
+      }
+      if (ch == ",") {
+        mark(i);
+        link.ch = marked();
+      }
+      if (ch == "*") {
+        mark(i);
+        state.end = true;
       }
     };
     return mach;
