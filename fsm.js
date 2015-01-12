@@ -1,6 +1,6 @@
 fsm = new Object();
 
-// Base for Finite State Machines
+// Base para el Automata Finito
   fsm.Link = function (ch, out) {
     this.ch = ch;
     this.out = out;
@@ -62,37 +62,9 @@ fsm = new Object();
       return str;
     };
   }
-// end section
+// fin de seccion
 
-fsm.str = new Object();
-// Base for String Evaluation
-  /*/
-  fsm.str.Pos = function (i) {
-    this.i = i;
-    this.state = states[i];
-    this.length = this.state.length;
-  }
-
-  var machine = fsm.format_compile("1:(a,1)(b,2);2:(a,1)(b,2)");
-
-  var positions = [new Pos(1)];
-
-  function evalPos (ch) {
-    var pos = positions.pop();
-    var link;
-    for (var i = 0; i < pos.length; i++) {
-      link = pos.state.get(i);
-      if (link.eval(ch)) {
-        positions.push(new Pos(link.out));
-      }
-    }
-
-    console.log(positions);
-  }
-  //*/
-// end section
-
-// Base for Fsm format
+// Base para la descripcion de FSM
 
   /* Info
     Un String representa una máquina completa.
@@ -135,13 +107,13 @@ fsm.str = new Object();
   fsm.format_compile = function (str) {
     var mach = new fsm.Machine();
 
-    var mark1 = 0, mark2 = -1;
+    var mark1 = 0, mark2 = -1; // -1 para que el salto de caracter lleve a 0.
     var name = null;
     var state = new fsm.State();
     var link = null;
 
     var mark = function (val) {
-      mark1 = mark2 + 1;
+      mark1 = mark2 + 1; // + 1 para saltar el caracter del comando.
       mark2 = val;
     }
 
@@ -182,4 +154,115 @@ fsm.str = new Object();
     };
     return mach;
   }
-// end section
+// fin de seccion
+
+fsm.str = new Object();
+// Base para evaluacion de Strings
+  //*/
+
+  fsm.EvalString = function (machine, str) {
+
+    Pos = function (st, ch) {
+      this.state = st;
+      this.ch = ch;
+      this.getState = function () {
+        return machine[this.state];
+      }
+      this.getChar = function () {
+        return str[this.ch];
+      }
+    }
+
+    var positions = [new Pos(1, 0)];
+    var cont = true;
+    var result = true;
+
+    var evalNext = function () {
+      var pos = positions.pop();
+      var state = machine[pos.state];
+      var ch = str[pos.ch];
+      var link;
+      var result;
+
+      var end = false;
+
+      for (var i = 0; i < state.length; i++) {
+        link = state.get(i);
+        result = link.eval(ch);
+
+        if (result) {
+          var nch = pos.ch + ((result==1)? 1 : 0);
+          var npos = new Pos(link.out, nch);
+          positions.push(npos);
+          end = end || machine[link.out].end
+        }
+      }
+
+      return end;
+    }
+
+    while(cont) {
+      for (var i = 0; i < positions.length; i++) {
+        var pos = positions[i]
+        if (machine[pos.state].end) {
+          if (pos.ch == str.length) {
+            return true;
+          }
+        }
+      };
+      evalNext();
+      if (positions.length == 0) {
+        return false;
+      }
+    }
+
+    return result;
+  }
+
+  fsm.Pos = function (st, ch) {
+    this.state = st;
+    this.ch = ch;
+    this.toString = function () {
+      return "(state:" + st + ",ch[" + ch + "]:" + str[ch] + ")";
+    }
+  }
+
+  var machine = fsm.format_compile("1:(a,1)(b,2);2:*(a,1)(b,2);");
+  var str = "aaabbb";
+
+  var positions = [new fsm.Pos(1,0)];
+
+  function evalNext () {
+    var pos = positions.pop();
+    var state = machine[pos.state];
+    var ch = str[pos.ch];
+    var link;
+    var result;
+    for (var i = 0; i < state.length; i++) {
+      link = state.get(i);
+      result = link.eval(ch);
+      if (result == 1) {
+        positions.push(new fsm.Pos(link.out, pos.ch + 1));
+      }
+      if (result == 2) {
+        positions.push(new fsm.Pos(link.out, pos.ch));
+      }
+    }
+    console.log(positions);
+  }
+
+  function evalPos (ch) {
+    var pos = positions.pop();
+    var state = machine[pos.state];
+    var link;
+    for (var i = 0; i < state.length; i++) {
+      link = state.get(i);
+      if (link.eval(ch)) {
+        positions.push(new fsm.Pos(link.out));
+      }
+    }
+
+    console.log(positions);
+  }
+  //*/
+// fin de seccion
