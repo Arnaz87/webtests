@@ -160,65 +160,6 @@ fsm.str = new Object();
 // Base para evaluacion de Strings
   //*/
 
-  fsm.EvalString = function (machine, str) {
-
-    Pos = function (st, ch) {
-      this.state = st;
-      this.ch = ch;
-      this.getState = function () {
-        return machine[this.state];
-      }
-      this.getChar = function () {
-        return str[this.ch];
-      }
-    }
-
-    var positions = [new Pos(1, 0)];
-    var cont = true;
-    var result = true;
-
-    var evalNext = function () {
-      var pos = positions.pop();
-      var state = machine[pos.state];
-      var ch = str[pos.ch];
-      var link;
-      var result;
-
-      var end = false;
-
-      for (var i = 0; i < state.length; i++) {
-        link = state.get(i);
-        result = link.eval(ch);
-
-        if (result) {
-          var nch = pos.ch + ((result==1)? 1 : 0);
-          var npos = new Pos(link.out, nch);
-          positions.push(npos);
-          end = end || machine[link.out].end
-        }
-      }
-
-      return end;
-    }
-
-    while(cont) {
-      for (var i = 0; i < positions.length; i++) {
-        var pos = positions[i]
-        if (machine[pos.state].end) {
-          if (pos.ch == str.length) {
-            return true;
-          }
-        }
-      };
-      evalNext();
-      if (positions.length == 0) {
-        return false;
-      }
-    }
-
-    return result;
-  }
-
   fsm.Pos = function (st, ch) {
     this.state = st;
     this.ch = ch;
@@ -227,42 +168,114 @@ fsm.str = new Object();
     }
   }
 
+  fsm.Evaluator = function (machine, string) {
+    this.machine = machine;
+    this.string = string;
+  }
+  fsm.Evaluator = {
+    "evalNext": function,
+    "getState": function,
+    "getChar": function,
+    "pushNewPos": function
+  };
+
   var machine = fsm.format_compile("1:(a,1)(b,2);2:*(a,1)(b,2);");
   var str = "aaabbb";
 
   var positions = [new fsm.Pos(1,0)];
+  var end = -1;
 
-  function evalNext () {
-    var pos = positions.pop();
-    var state = machine[pos.state];
-    var ch = str[pos.ch];
-    var link;
-    var result;
-    for (var i = 0; i < state.length; i++) {
-      link = state.get(i);
-      result = link.eval(ch);
-      if (result == 1) {
-        positions.push(new fsm.Pos(link.out, pos.ch + 1));
-      }
-      if (result == 2) {
-        positions.push(new fsm.Pos(link.out, pos.ch));
-      }
+  function fullMatch (ns) {
+    end = -1;
+    str = ns;
+    var cont = true;
+    positions = [new fsm.Pos(1,0)];
+    while (cont) {
+      cont = evalNext();
     }
-    console.log(positions);
+    if (end == str.length - 1) {
+      return true;
+    }
+    return false;
   }
 
-  function evalPos (ch) {
-    var pos = positions.pop();
-    var state = machine[pos.state];
-    var link;
-    for (var i = 0; i < state.length; i++) {
-      link = state.get(i);
-      if (link.eval(ch)) {
-        positions.push(new fsm.Pos(link.out));
+  function partialMatch (ns) {
+    end = -1;
+    str = ns;
+    for (var i = 0; i < str.length; i++) {
+      positions = [new fsm.Pos(1,i)];
+      var cont = true;
+      while (cont) {
+        cont = evalNext();
+      }
+      if (end > 0) {
+        return true;
       }
     }
+    return false;
+  }
 
-    console.log(positions);
+  function find (ns) {
+    end = -1;
+    str = ns;
+    for (var i = 0; i < str.length; i++) {
+      positions = [new fsm.Pos(1,i)];
+      var cont = true;
+      while (cont) {
+        cont = evalNext();
+      }
+      if (end > 0) {
+        return [i, end];
+      }
+    }
+    return false;
+  }
+
+  function extract (ns) {
+    var result = find(ns);
+    if (result != false) {
+      return ns.slice(result[0], result[1]+1);
+    }
+    return false;
+  }
+
+  function evalNext () {
+    if (positions.length == 0) return false;
+    var pos = positions.pop();
+    var state = getState(pos);
+    var ch = getChar(pos);
+
+    var link, result;
+
+    for (var i = 0; i < state.length; i++) {
+      link = state.get(i);
+      result = link.eval(ch)
+
+      if (result) {
+        pushNewPos(link.out, pos.ch + 1, pos.ch);
+      }
+    };
+    //console.log(positions);
+    //console.log(end);
+    return true;
+  }
+
+  function getState (pos) {
+    return machine[pos.state];
+  }
+  function getChar (pos) {
+    return str[pos.ch];
+  }
+
+  function pushNewPos (st, ch, currentCh) {
+    pos = new fsm.Pos(st, ch);
+    positions.push(pos);
+    var state = getState(pos);
+    if (state.end) {
+      if (currentCh > end) {
+        end = currentCh;
+      }
+    }
   }
   //*/
 // fin de seccion
