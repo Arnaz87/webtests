@@ -284,5 +284,65 @@ fsm = new Object();
 
 // Base para construccion de Regex
 
+  fsm.regex_compile = function (str) {
 
+    var Section = function (start, end) {
+      this.start = start;
+      this.end = end;
+    }
+
+    var newState = function () {
+      var key = nextState;
+      nextState++;
+      var state = new fsm.State();
+      machine[key] = state;
+      return key;
+    }
+
+    var createSection = function () {
+      return new Section(newState(), newState());
+    }
+
+    var nextState = 2;
+    var machine = new fsm.Machine();
+    var sections = [];
+
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i];
+      switch (ch) {
+        case '.':
+          var s2 = sections.pop();
+          var s1 = sections.pop();
+          var link = new fsm.Link("", s2.start);
+          machine[s1.end].push(link);
+          var sec = new Section(s1.start, s2.end);
+          sections.push(sec);
+          break;
+        case '|':
+          var s2 = sections.pop();
+          var s1 = sections.pop();
+          var sec = createSection();
+
+          machine[sec.start].push(new fsm.Link("", s1.start));
+          machine[sec.start].push(new fsm.Link("", s2.start));
+
+          machine[s1.end].push(new fsm.Link("", sec.end));
+          machine[s2.end].push(new fsm.Link("", sec.end));
+
+          sections.push(sec);
+          break;
+        default:
+          var sec = createSection();
+          var link = new fsm.Link(ch, sec.end);
+          machine[sec.start].push(link);
+          sections.push(sec);
+          break;
+      }
+    };
+    var section = sections.pop();
+    machine[section.end].end = true;
+    machine[1] = machine[section.start];
+
+    return machine;
+  }
 // fin de seccion
