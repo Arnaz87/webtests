@@ -173,11 +173,15 @@ fsm = new Object();
     this.end = null;
     this.positions = [];
     this.canContinue = false;
+    this.maxCount = 4096;
+    this.maxPositions = 512;
+    this.count = 0;
 
     this.init = function (start) {
       this.start = start;
       this.positions = [new fsm.Pos(1, start)];
       this.canContinue = true;
+      this.count = 0;
     }
 
     this.evalNext = function () {
@@ -192,15 +196,25 @@ fsm = new Object();
         result = link.eval(ch)
 
         if (result) {
-          this.pushNewPos(link.out, pos.ch + 1, pos.ch);
+          var newch = pos.ch + ((result == 1)? 1 : 0);
+          this.pushNewPos(link.out, newch, pos.ch);
         }
       };
       if (this.positions.length == 0) {
         this.canContinue = false;
       }
+      if (this.count > this.maxCount) {
+        this.canContinue = false;
+        console.error("Max count exceded!! Please redesign the machine: " + String(this.machine));
+      }
+      if (this.positions.length > this.maxPositions) {
+        this.canContinue = false;
+        console.error("Max positions count exceded!! Please redesign the machine: " + String(this.machine));
+      }
     };
 
     this.pushNewPos = function (st, ch, currentCh) {
+      this.count++;
       pos = new fsm.Pos(st, ch);
       this.positions.push(pos);
       this.checkEnd(machine[st], currentCh);
@@ -223,6 +237,9 @@ fsm = new Object();
     evaluator.init(0);
     while (evaluator.canContinue) {
       evaluator.evalNext();
+      if (evaluator.end == true) {
+        break;
+      }
     }
     return evaluator.end;
   }
@@ -263,4 +280,9 @@ fsm = new Object();
     }
     return false;
   }
+// fin de seccion
+
+// Base para construccion de Regex
+
+
 // fin de seccion
