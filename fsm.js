@@ -156,9 +156,7 @@ fsm = new Object();
   }
 // fin de seccion
 
-fsm.str = new Object();
 // Base para evaluacion de Strings
-  //*/
 
   fsm.Pos = function (st, ch) {
     this.state = st;
@@ -170,112 +168,99 @@ fsm.str = new Object();
 
   fsm.Evaluator = function (machine, string) {
     this.machine = machine;
-    this.string = string;
-  }
-  fsm.Evaluator = {
-    "evalNext": function,
-    "getState": function,
-    "getChar": function,
-    "pushNewPos": function
-  };
+    this.str = string;
+    this.start = 0;
+    this.end = null;
+    this.positions = [];
+    this.canContinue = false;
 
-  var machine = fsm.format_compile("1:(a,1)(b,2);2:*(a,1)(b,2);");
-  var str = "aaabbb";
-
-  var positions = [new fsm.Pos(1,0)];
-  var end = -1;
-
-  function fullMatch (ns) {
-    end = -1;
-    str = ns;
-    var cont = true;
-    positions = [new fsm.Pos(1,0)];
-    while (cont) {
-      cont = evalNext();
+    this.init = function (start) {
+      this.start = start;
+      this.positions = [new fsm.Pos(1, start)];
+      this.canContinue = true;
     }
-    if (end == str.length - 1) {
-      return true;
-    }
-    return false;
-  }
 
-  function partialMatch (ns) {
-    end = -1;
-    str = ns;
-    for (var i = 0; i < str.length; i++) {
-      positions = [new fsm.Pos(1,i)];
-      var cont = true;
-      while (cont) {
-        cont = evalNext();
-      }
-      if (end > 0) {
-        return true;
-      }
-    }
-    return false;
-  }
+    this.evalNext = function () {
+      var pos = this.positions.pop();
+      var state = this.machine[pos.state];
+      var ch = this.str[pos.ch];
 
-  function find (ns) {
-    end = -1;
-    str = ns;
-    for (var i = 0; i < str.length; i++) {
-      positions = [new fsm.Pos(1,i)];
-      var cont = true;
-      while (cont) {
-        cont = evalNext();
-      }
-      if (end > 0) {
-        return [i, end];
-      }
-    }
-    return false;
-  }
+      var link, result;
 
-  function extract (ns) {
-    var result = find(ns);
-    if (result != false) {
-      return ns.slice(result[0], result[1]+1);
-    }
-    return false;
-  }
+      for (var i = 0; i < state.length; i++) {
+        link = state.get(i);
+        result = link.eval(ch)
 
-  function evalNext () {
-    if (positions.length == 0) return false;
-    var pos = positions.pop();
-    var state = getState(pos);
-    var ch = getChar(pos);
-
-    var link, result;
-
-    for (var i = 0; i < state.length; i++) {
-      link = state.get(i);
-      result = link.eval(ch)
-
-      if (result) {
-        pushNewPos(link.out, pos.ch + 1, pos.ch);
+        if (result) {
+          this.pushNewPos(link.out, pos.ch + 1, pos.ch);
+        }
+      };
+      if (this.positions.length == 0) {
+        this.canContinue = false;
       }
     };
-    //console.log(positions);
-    //console.log(end);
-    return true;
+
+    this.pushNewPos = function (st, ch, currentCh) {
+      pos = new fsm.Pos(st, ch);
+      this.positions.push(pos);
+      this.checkEnd(machine[st], currentCh);
+    };
+
+    this.checkEnd = function () {};
   }
 
-  function getState (pos) {
-    return machine[pos.state];
-  }
-  function getChar (pos) {
-    return str[pos.ch];
-  }
-
-  function pushNewPos (st, ch, currentCh) {
-    pos = new fsm.Pos(st, ch);
-    positions.push(pos);
-    var state = getState(pos);
-    if (state.end) {
-      if (currentCh > end) {
-        end = currentCh;
+  fsm.fullMatch = function (machine, str) {
+    var evaluator = new fsm.Evaluator(machine, str);
+    evaluator.end = false;
+    evaluator.checkEnd = function (state, ch) {
+      if (state.end) {
+        if (ch == this.str.length - 1) {
+          this.end = true;
+        }
       }
+    };
+
+    evaluator.init(0);
+    while (evaluator.canContinue) {
+      evaluator.evalNext();
     }
+    return evaluator.end;
   }
-  //*/
+
+  fsm.find = function (machine, str) {
+    var evaluator = new fsm.Evaluator(machine, str);
+    evaluator.end = -1;
+    evaluator.checkEnd = function (state, ch) {
+      if (state.end) {
+        if (ch > this.end) {
+          this.end = ch;
+        }
+      }
+    };
+    var i = 0;
+    while(i < str.length) {
+      evaluator.init(i);
+      while (evaluator.canContinue) {
+        evaluator.evalNext();
+      }
+      if (evaluator.end >= 0) {
+        return [i, evaluator.end];
+      }
+      i++;
+    }
+    return false;
+  }
+
+  fsm.partialMatch = function (machine, str) {
+    var result = fsm.find(machine, str);
+    return !(result == false);
+  }
+
+  fsm.extract = function (machine, str) {
+    var result = fsm.find(machine, str);
+    if (result != false) {
+      return str.slice(result[0], result[1]+1);
+    }
+    return false;
+  }
 // fin de seccion
