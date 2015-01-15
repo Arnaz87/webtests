@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Non Deterministic Finite Automata</title>
+  <script src="jquery.js"></script>
+  <script src="fsm.js"></script>
+</head>
+<body>
+  <div>
+    Regex <input type="text" id="regex">
+    <button onclick="compile()">Compile</button>
+    <br>
+    <pre id="machine"></pre>
+    <br>
+
+    String <input type="text" id="str"> <br>
+
+    <button onclick="match()">Match</button>
+    <br>
+
+    <strong>Full match:</strong> <span id="full"></span> <br>
+    <strong>Extracted:</strong> <span id="extract"></span>
+    at <span id="part"></span><br>
+  </div>
+</body>
+<script type="text/javascript">
+  var machine = new fsm.Machine();
+  function compile () {
+    var str = $("#regex").val();
+    machine = fsm.regex_compile(str);
+    $("#machine").text(String(machine));
+  }
+
+  function match () {
+    var str = $("#str").val();
+    $("#full").text(fsm.fullMatch(machine, str));
+    $("#part").text(fsm.find(machine, str));
+    $("#extract").text(fsm.extract(machine, str));
+  }
+
+</script>
+</html>

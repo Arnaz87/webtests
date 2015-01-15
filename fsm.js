@@ -52,11 +52,13 @@ fsm = new Object();
   }
 
   fsm.Machine = function () {
+    this.start = 1;
     this.toString = function () {
       var str = "";
+      str += "start = " + this.start + "\n";
       for (var i in this) {
-        if (typeof this[i] != "function") {
-          str += i + ":" + this[i].toString() + ";";
+        if (typeof this[i] != "function" && i != "start") {
+          str += i + ":" + this[i].toString() + ";\n";
         }
       };
       return str;
@@ -158,7 +160,8 @@ fsm = new Object();
 
 // Base para evaluacion de Strings
 
-  fsm.Pos = function (st, ch) {
+  fsm.Pos = function (st, ch, str) {
+    //Una posición es un estado "state" que va a revisar el string en "ch".
     this.state = st;
     this.ch = ch;
     this.toString = function () {
@@ -179,7 +182,7 @@ fsm = new Object();
 
     this.init = function (start) {
       this.start = start;
-      this.positions = [new fsm.Pos(1, start)];
+      this.positions = [new fsm.Pos(this.machine.start, start, this.str)];
       this.canContinue = true;
       this.count = 0;
     }
@@ -197,7 +200,7 @@ fsm = new Object();
 
         if (result) {
           var newch = pos.ch + ((result == 1)? 1 : 0);
-          this.pushNewPos(link.out, newch, pos.ch);
+          this.pushNewPos(link.out, newch);
         }
       };
       if (this.positions.length == 0) {
@@ -213,11 +216,11 @@ fsm = new Object();
       }
     };
 
-    this.pushNewPos = function (st, ch, currentCh) {
+    this.pushNewPos = function (st, ch) {
       this.count++;
-      pos = new fsm.Pos(st, ch);
+      pos = new fsm.Pos(st, ch, this.str);
       this.positions.push(pos);
-      this.checkEnd(machine[st], currentCh);
+      this.checkEnd(machine[st], ch - 1);
     };
 
     this.checkEnd = function () {};
@@ -303,7 +306,7 @@ fsm = new Object();
       return new Section(newState(), newState());
     }
 
-    var nextState = 2;
+    var nextState = 1;
     var machine = new fsm.Machine();
     var sections = [];
 
@@ -331,6 +334,28 @@ fsm = new Object();
 
           sections.push(sec);
           break;
+        case '?':
+          var sec = sections.pop();
+          var link = new fsm.Link("", sec.end);
+          machine[sec.start].push(link);
+          sections.push(sec);
+          break;
+        case '+':
+          var sec = sections.pop();
+          var link = new fsm.Link("", sec.start);
+          machine[sec.end].push(link);
+          sections.push(sec);
+          break;
+        case '*':
+          var sec = sections.pop();
+          var st1 = sec.end;
+          var st2 = newState();
+          machine[st1].push(new fsm.Link("", sec.start));
+          machine[st1].push(new fsm.Link("", st2));
+          machine[sec.start].push(new fsm.Link("", st2));
+          sec.end = st2;
+          sections.push(sec);
+          break;
         default:
           var sec = createSection();
           var link = new fsm.Link(ch, sec.end);
@@ -341,7 +366,7 @@ fsm = new Object();
     };
     var section = sections.pop();
     machine[section.end].end = true;
-    machine[1] = machine[section.start];
+    machine.start = section.start;
 
     return machine;
   }
