@@ -5,13 +5,23 @@
   <title>Non Deterministic Finite Automata</title>
   <script src="jquery.js"></script>
   <script src="fsm.js"></script>
+  <script src="in2po.js"></script>
 </head>
 <body>
   <div>
     Regex <input type="text" id="regex">
     <button onclick="compile()">Compile</button>
     <br>
-    <pre id="machine"></pre>
+    <table>
+      <tr>
+        <td>
+          <pre id="machine"></pre>
+        </td>
+        <td>
+          <pre id="dfa"></pre>
+        </td>
+      </tr>
+    </table>
     <br>
 
     String <input type="text" id="str"> <br>
@@ -26,10 +36,15 @@
 </body>
 <script type="text/javascript">
   var machine = new fsm.Machine();
+  var dfa;
   function compile () {
     var str = $("#regex").val();
+    str = in2po(str);
     machine = fsm.regex_compile(str);
+    dfa = fsm.toDFA(machine);
     $("#machine").text(String(machine));
+    $("#dfa").text(String(dfa));
+    console.log(dfa);
   }
 
   function match () {
@@ -38,6 +53,9 @@
     $("#part").text(fsm.find(machine, str));
     $("#extract").text(fsm.extract(machine, str));
   }
+    var compare = function (a, b) {
+      return a.sort().join() == b.sort().join();
+    }
 
 </script>
 </html>

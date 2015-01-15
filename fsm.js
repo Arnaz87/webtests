@@ -371,3 +371,56 @@ fsm = new Object();
     return machine;
   }
 // fin de seccion
+
+// Base para conversion a DFA
+  
+  fsm.toDFA = function (machine) {
+
+    var Group = function (name) {
+      this.states = [];
+      this.state = name;
+      this.add = function (state) {
+        if (this.states.indexOf(state) == -1) {
+          this.states.push(state);
+        }
+      }
+      this.concat = function (other) {
+        this.states = this.states.concat(other.states);
+      }
+      this.sorted = function () {
+        return this.states.sort().join();
+      }
+      this.toString = function () {
+        return "(" + this.state + ":" + this.states.join() + ")";
+      }
+    }
+
+    var compare = function (a, b) {
+      return a.sorted() == b.sorted();
+    }
+
+    var group = function (name) {
+      var state = machine[name];
+      var g = new Group(name);
+      for (var i = 0; i < state.length; i++) {
+        link = state.get(i);
+        if (link.ch == "") {
+          g.add(link.out);
+          g.concat(group(link.out));
+        }
+      }
+      return g;
+    }
+
+    var addLinks = function () {
+      
+    }
+
+    var dfa = new fsm.Machine();
+    var states = [];
+
+    states.push(group(machine.start));
+
+    return states;
+  }
+// fin de seccion

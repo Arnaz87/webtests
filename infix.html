@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Infix Operations</title>
+  <script src="jquery.js"></script>
+</head>
+<body>
+  <div>
+    Ecuación: <input type="text" id="eq"><br>
+    Resultado: <span id="res"></span><br>
+    <button onclick="action()">Evaluar</button><br>
+    <pre id="debug"></pre>
+  </div>
+</body>
+<script type="text/javascript">
+
+  function factorial (num) {
+    return num * num;
+  }
+
+  function power (exp, base) {
+    var result = 1;
+    for (var i = 0; i < exp; i++) {
+      result *= base;
+    };
+    return result;
+  }
+
+  var ops = {
+    "regex": [
+      ["|", "in", 1],
+      [".", "in", 2],
+      ["+", "post", 3],
+      ["*", "post", 3],
+      ["?", "post", 3],
+      ["(", "open", 0],
+      [")", "close", 0]
+    ],
+    "math": [
+      ["+", "in", 1],
+      ["-", "in", 1],
+      ["*", "in", 2],
+      ["/", "in", 2],
+      ["^", "in", 3],
+      ["n", "pre", 3],
+      ["i", "pre", 3],
+      ["!", "post", 3],
+      ["(", "open", 0],
+      [")", "close", 0]
+    ]
+  }
+
+  var Op = function (ch, level) {
+    this.ch = ch;
+    this.level = level;
+    this.toString = function () {return "(" + ch + " " + level + ")";}
+  }
+
+  var set = ops.math;
+
+  function action () {
+    var str = $("#eq").val();
+    var out = [""];
+    var stack = [];
+
+    var concat = function (ch) {
+      var e = out.pop();
+      e += ch;
+      out.push(e);
+    }
+
+    var extract = function () {
+      return Number(out.pop());
+    }
+
+    var last = function () {
+      return stack[stack.length - 1];
+    }
+
+    var find = function (ch) {
+      for (var i in set) {
+        if (set[i][0] == ch) {
+          return set[i];
+        }
+      }
+      return null;
+    }
+
+    var operate = function () {
+      var op = stack.pop();
+      var ch = op[0];
+      var result;
+      switch (ch) {
+        case "+":
+          //result = out.pop() + ch + out.pop();
+          result = extract() + extract();
+          break;
+        case "*":
+          //result = out.pop() + ch + out.pop();
+          result = extract() * extract();
+          break;
+        case "^":
+          result = power(extract(), extract());
+          break;
+        case "!":
+          //result = out.pop() + "XXX";
+          result = factorial(extract());
+          break;
+        case "n":
+          result = -extract();
+          break;
+        case "i":
+          result = 1 / extract();
+          break;
+      }
+      //result = "[" + result + "]";
+      out.push(result);
+    }
+
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i];
+      var op = find(ch);
+      if (!op) {
+        if (ch != " ") {
+          concat(ch);
+        }
+      } else if (op[1] == "open") {
+        stack.push(op);
+      } else if (op[1] == "close") {
+        while (last()[2] > op[2]) {
+          operate();
+        }
+        stack.pop();
+      } else {
+        while (last() != undefined && last()[2] >= op[2]) {
+          operate();
+        }
+        stack.push(op);
+        if (op[1] == "post") {
+          operate();
+        } else if (op[1] == "in") {
+          out.push("");
+        }
+      }
+    };
+    while (last() != undefined) {
+      operate();
+    }
+    $("#res").text(out[0]);
+    console.log(out, stack);
+  }
+
+</script>
+</html>
