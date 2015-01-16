@@ -373,54 +373,125 @@ fsm = new Object();
 // fin de seccion
 
 // Base para conversion a DFA
-  
+
   fsm.toDFA = function (machine) {
 
-    var Group = function (name) {
-      this.states = [];
-      this.state = name;
-      this.add = function (state) {
-        if (this.states.indexOf(state) == -1) {
-          this.states.push(state);
-        }
+    var Grupo = function (nombre) {
+      this.estados = [nombre];
+      this.estado = null;
+      var estado = machine[nombre];
+      this.combine = function (other) {
+        for (var i = 0; i < other.estados.length; i++) {
+          var e = other.estados[i];
+          this.estados.push(e);
+        };
       }
-      this.concat = function (other) {
-        this.states = this.states.concat(other.states);
-      }
-      this.sorted = function () {
-        return this.states.sort().join();
-      }
-      this.toString = function () {
-        return "(" + this.state + ":" + this.states.join() + ")";
-      }
-    }
-
-    var compare = function (a, b) {
-      return a.sorted() == b.sorted();
-    }
-
-    var group = function (name) {
-      var state = machine[name];
-      var g = new Group(name);
-      for (var i = 0; i < state.length; i++) {
-        link = state.get(i);
+      for (var i = 0; i < estado.links.length; i++) {
+        var link = estado.links[i];
         if (link.ch == "") {
-          g.add(link.out);
-          g.concat(group(link.out));
+          this.combine(new Grupo(link.out));
         }
       }
-      return g;
-    }
-
-    var addLinks = function () {
-      
+      this.toString = function () {return "<" + this.estado + ":" + this.estados.join() + ">"}
     }
 
     var dfa = new fsm.Machine();
-    var states = [];
+    var siguiente = 1;
+    var grupos = [];
 
-    states.push(group(machine.start));
+    // Inserta un grupo en la lista de grupos.
+    // Si ya existe en la lista, lo devuelve.
+    var push = function (grupo) {
+      grupos.push(grupo);
+    }
 
-    return states;
+    var dfaPush = function (grupo) {
+      dfa[siguiente] = new fsm.State();
+      grupo.estado = siguiente;
+      siguiente++;
+    }
+
+    var extraerLinks = function (grupo) {
+      var links = [];
+      for (var i in grupo.estados) {
+        var estado = machine[grupo.estados[i]];
+        if (estado.end) {
+          dfa[grupo.estado].end = true;
+        }
+        for (var j in estado.links) {
+          link = estado.links[j];
+          if (link.ch != "") {
+            links.push(link);
+          }
+        }
+      }
+      return links;
+    }
+
+    var procesarEstado = function (nombre) {
+      var grupo = new Grupo(nombre);
+      var estado = null;
+      var existe = push(grupo);
+      if (existe) {
+        return existe;
+      }
+      dfaPush(grupo);
+      estado = dfa[grupo.estado];
+
+      var links = extraerLinks(grupo);
+      for (var i in links) {
+        var link = links[i];
+        var nuevo = procesarEstado(link.out);
+        estado.push(new fsm.Link(link.ch, nuevo.estado));
+      };
+
+
+      return grupo;
+    }
+
+    procesarEstado(machine.start);
+    return [dfa, grupos];
   }
 // fin de seccion
+
+/*
+Algoritmo
+==========
+
+grupos = []
+
+ProcesarEstado(estado inicial)
+
+def ProcesarEstado (estado)
+  grupo = new Grupo(estado)
+  existe = Push(grupo)
+  if existe
+    return existe
+  links = ExtraerLinks(grupo)
+  for link in links
+    nuevo = ProcesarEstado(link.out)
+    grupo.estado.push(new Link(link.ch, nuevo.estado))
+  return grupo
+
+def Push (grupo)
+  if grupos.contains(grupo)
+    return grupos.find(grupo)
+  else
+    grupos.push(grupo)
+
+def ExtraerLinks (grupo)
+  links = []
+  for estado in grupo
+    for link in estado.links
+      if !link.epsilon
+        links.push(link)
+    links.concat(estado.links)
+  return links
+
+class Grupo (estado)
+  this = []
+  this.push(estado)
+  for link in estado.links
+    if link.epsilon
+      this.concat(new Grupo(link.out))
+*/
