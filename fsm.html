@@ -33,6 +33,14 @@
     <strong>Extracted:</strong> <span id="extract"></span>
     at <span id="part"></span><br>
   </div>
+  <div>
+    <textarea id="description"></textarea>
+    <br>
+    <pre id="compiled"></pre>
+    <br>
+    <button onclick="format()">Format</button>
+
+  </div>
 </body>
 <script type="text/javascript">
   var machine = new fsm.Machine();
@@ -41,6 +49,7 @@
     var str = $("#regex").val();
     str = in2po(str);
     machine = fsm.regex_compile(str);
+    //machine = fsm.format_compile(str);
     dfa = fsm.toDFA(machine);
     $("#machine").text(String(machine));
     $("#dfa").text(String(dfa));
@@ -53,9 +62,13 @@
     $("#part").text(fsm.find(machine, str));
     $("#extract").text(fsm.extract(machine, str));
   }
-    var compare = function (a, b) {
-      return a.sort().join() == b.sort().join();
-    }
+
+  function format () {
+    var str = $("#description").val();
+    var mach = fsm.format_compile(str);
+    console.log(mach);
+    $("#compiled").text(String(mach));
+  }
 
 </script>
 </html>
